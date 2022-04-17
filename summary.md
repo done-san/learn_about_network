@@ -1,4 +1,4 @@
-# summary  
+# ネットワークはいいぞ(NWまとめ)  
 
 ## 目次  
 1. プロトコル  
@@ -6,7 +6,8 @@
 3. 物理層  
 4. データリンク層
 5. ネットワーク層
-6. 
+6. トランスポート層
+7. セッション層、プレゼンテーション層、アプリケーション層
 
 ### 1. プロトコル  
 コンピュータは0と1で動作している。
@@ -25,10 +26,44 @@
 - 3, ネットワーク層　　　　：データ転送を行う機器間のアドレスの管理や経路選択  
 - 2, データリンク層　　　　：直接接続された機器間のデータフレームの識別と転送  
 - 1, 物理層　　　　　　　　：物理的な接続方法の規定  
-  
-  
+
+#### Tips1 カプセル化と非カプセル化
+ネットワークで「データを送信するとき」と「データを受信するとき」で  
+コンピュータが以下の動作をする。
+
+
+```
+1. データを送信するとき
+
+   アプリケーション層 
+-> プレゼンテーション層
+-> セッション層
+-> トランスポート層
+-> ネットワーク層
+-> データリンク層
+-> 物理層
+
+データの送信において、各層でヘッダーを付加して、下の階層にデータを渡す。
+このヘッダーを付加することを「カプセル化」という。
+```  
+```
+2. データを受信するとき
+
+   アプリケーション層 
+<- プレゼンテーション層
+<- セッション層
+<- トランスポート層
+<- ネットワーク層
+<- データリンク層
+<- 物理層
+
+データの受信において、各層でヘッダーを取り外して、上の階層にデータを渡す。
+このヘッダーを取り外すことを「非カプセル化」という。
+```  
+
+
 ### 3. 物理層
-1bit(「0」と「1」) を判別する。
+1bit(0 と 1) を判別する。
 イーサネットフレームにおける、プリアンブルを「データのはじまり」とする。  
 ```
 IEEE802.3
@@ -104,7 +139,6 @@ ex) 192.168.0.N/24 (0 <= n <= 255)
 ネットワークアドレス　　　： 192.168.0.0
 ブロードキャストアドレス　： 192.168.0.255
 ホストアドレス　　　　　　： 192.168.0.1 ~ 192.168.0.254 (254ホスト = 2^8-2)
-
 ```  
   
 IPアドレスは、さらに以下の2種類に割り当てられる。  
@@ -130,6 +164,180 @@ IPv4アドレスを集約するIPアドレスとしてローカルIPアドレス
 なお、説明は割愛させてもらう。(クラスレスなサブネットの構築に大変重要ではあるが)
 
 一応、大規模・中規模・小規模程度の感覚で使用するとおぼえておくとよい。
-企業ネットワーク(イントラネット)においては、ほとんどクラスAを利用する。
+ちなみに、企業ネットワーク(イントラネット)においては、ほとんどクラスAを利用する。
+```  
+
+#### Tips2 IPアドレスとMACアドレスの紐づけ
+データ転送において、宛先MACアドレスが分からないことがある。  
+このとき、宛先IPアドレスが分かっている前提で、ARP(Address Resolution Protocol)というプロトコルを利用する。  
+  
+ARPは、ブロードキャストフレームを転送して、該当の宛先IPアドレスを保持するホストからの応答をもとに  
+宛先のMACアドレスを求めるプロトコル。
+
+これとは逆のRAPR(Reverse Address Resolution Protocol)があるが、今はもう使わない。  
+  
+#### Tips3 グローバルIPアドレスとローカルIPアドレスの紐づけ
+グローバルIPアドレスでルータまで届いたパケットのIPアドレスは、NAT(Network Address Translation)というプロトコルによって  
+ローカルIPアドレスに変換することができる。  
+  
+ISPのネットワーク機器(たとえば、モデム)と接続しているルータではメモリ上にNATテーブルが展開されており、  
+そのNATテーブルをもとにグローバルIPアドレスとローカルIPアドレスの紐づけをする。  
+    
+さらにポート番号をもとにして、NAT変換するプロトコルをNAPT(Network Address Protocol Translation)という。  
+``` グローバルIPアドレス + ポート番号 <=> ローカルIPアドレス + ポート番号 ``` という紐づけをしている。  
+  
+#### Tips4 IPアドレスの割り当て
+「IPアドレスは静的に割り当てる方法(つまり手動)」と「動的に割り当てる方法」の2種類がある。  
+  
+手動で割り当てる場合、事前にホストがあるネットワークの「割り当て可能なホストアドレス」を知る必要がある。  
+また、所属するネットワークのサブネットマスクを合わせた上で、なおかつデフォルトゲートウェイを指定する必要があるため設定は初心者ではむずかしい。
+  
+動的に割り当てる場合、DHCP(Dynamic Host Configuration Protocol)を利用する。
+この方法が通常の利用では一般的なので説明すると、  
+- DHCPクライアント
+- DHCPサーバ  
+の2つがある。  
+  
+IPアドレスを割り当てたいホストのことをDHCPクライアントといい、IPアドレスの貸し出しを行うホストをDHCPサーバという。  
+DHCPサーバは、割り当て可能なIPアドレスの範囲(DHCPプール)を保持しており、この中からDHCPクライアントにIPアドレスを割り当てる。  
+
+通信の流れは以下。
+``` 
+(1) : DHCPクライアント
+(2) : DHCPサーバ
+
+   (1) DHCP Discover 
+-> (2) DHCP Offer 
+-> (1) DHCP Request 
+-> (2) DHCP ACK
+```  
+  
+#### Tips5 ドメインとIPアドレスを紐づける
+HTTPやSMTPなどで、ドメイン名を利用して通信をする。  
+たとえば、 ``` www.example.com ``` にデータを送りたいとき、  
+相手のIPアドレスが分からないとデータを送信することができない。  
+  
+ドメイン名から、IPアドレスを求めるネットワークの仕組みを  
+「DNS(Domain Network System)」という。  
+  
+DNSには、クライアントとサーバが存在する。  
+たとえば、Google Chrome(Webブラウザ)を開いて、検索バーに  
+``` https://www.example.com ``` と入力してEnterを押す。  
+  
+このとき、DNSクライアントはChromeであり、DNSサーバは特に指定がない限りは、  
+一般家庭ではルータなどが行う。  
+  
+詳細な説明は割愛するが、非常に重要なのでかならず学んで覚えることを推奨する。  
+  
+### 6. トランスポート層  
+再送制御などの通信品質を確保すること。  
+TCP/UDPが主なプロトコル。  
+  
+TCP(Transmission Control Protocol) : 送信先にデータが確実に届けることを制御する(そのため、通信速度は比較的遅い)  
+UDP(User Datagram Protocol)        : 送信先にデータが届くかどうかを制御しない(そのため、通信速度は比較的早い)  
+  
+  
+|       |  TCP  |  UDP  |
+| ----  | ----  | ----  |
+| 通信速度      |  遅い   |  速い   |
+| 通信品質      |  良い   |  悪い   |
+| 利用例      |  メール   |  ライブ配信   |  
+  
+TCPは、データを送る前に3ウェイハンドシェイクによって、コネクション(論理的な通信路)を確立する。
+3ウェイハンドシェイクの通信の流れは以下。(ちなみに、WireSharkで見れば一発で分かるので暇なら触ろう！)  
+  
+```
+(1) 送信元
+(2) 送信先
+
+   (1) TCP SYN
+-> (2) TCP ACK + SYN
+-> (1) TCP ACK
+```  
+  
+- ポート番号
+```
+コンピュータ通信において、OS上で動作するアプリケーションを識別するための番号。
+16ビットで構成されている(範囲は10進数で、0~65535)。
+
+TCP、UDPのどちらについても0~65535のポートが割り当てられる。
+
+区分けが3種類ある。
+1) 0     - 1023   
+2) 1024  - 49151  
+3) 49152 - 65535 
+
+1) ウェルノンポート　　：IANAで管理されている。よく使用されているアプリケーションで使われるポート番号。特定可能だけどできれば覚えよう
+2) レジスタードポート　：IANAで管理されている。固有のアプリケーションで登録されていることもあり、ググれば特定可能
+3) エフェメラルポート　：IANAは知らない。一時的に利用されるポート番号。どのアプリケーションであるかを特定することは、ポートスキャンすれば特定可能
+```  
+  
+### 7. セッション層、プレゼンテーション層、アプリケーション層
+アプリケーションの実装に依存するため、これらの層はひとまとめにされている。
 
 ```
+ex) HTTP (curl)
+
+$ curl -i https://wwww.example.com
+
+HTTP/2 200
+accept-ranges: bytes
+age: 414577
+cache-control: max-age=604800
+content-type: text/html; charset=UTF-8
+date: Sun, 17 Apr 2022 03:10:42 GMT
+etag: "3147526947"
+expires: Sun, 24 Apr 2022 03:10:42 GMT
+last-modified: Thu, 17 Oct 2019 07:18:26 GMT
+server: ECS (sab/56BB)
+vary: Accept-Encoding
+x-cache: HIT
+content-length: 1256
+
+<!doctype html>
+<html>
+<head>
+    <title>Example Domain</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type="text/css">
+    body {
+        background-color: #f0f0f2;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+    }
+    div {
+        width: 600px;
+        margin: 5em auto;
+        padding: 2em;
+        background-color: #fdfdff;
+        border-radius: 0.5em;
+        box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
+    }
+    a:link, a:visited {
+        color: #38488f;
+        text-decoration: none;
+    }
+    @media (max-width: 700px) {
+        div {
+            margin: 0 auto;
+            width: auto;
+        }
+    }
+    </style>
+</head>
+
+<body>
+<div>
+    <h1>Example Domain</h1>
+    <p>This domain is for use in illustrative examples in documents. You may use this
+    domain in literature without prior coordination or asking for permission.</p>
+    <p><a href="https://www.iana.org/domains/example">More information...</a></p>
+</div>
+</body>
+</html>
+```  
